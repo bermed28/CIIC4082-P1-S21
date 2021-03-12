@@ -2,7 +2,7 @@
 #                                                                              #
 #      IAR Universal Linker V6.5.4.100                                         #
 #                                                                              #
-#           Link time     =  10/Mar/2021  20:48:46                             #
+#           Link time     =  11/Mar/2021  20:20:31                             #
 #           Target CPU    =  MSP430                                            #
 #           List file     =  C:\Users\Jose\Desktop\IAR\Calculadora\Debug\List\ #
 #                            Calculadora.map                                   #
@@ -11,7 +11,7 @@
 #                            Format: ubrof10                                   #
 #                            UBROF version 10.0.6                              #
 #                            Using library modules for C-SPY (-rt)             #
-#           Command line  =  -f C:\Users\Jose\AppData\Local\Temp\EW7597.tmp    #
+#           Command line  =  -f C:\Users\Jose\AppData\Local\Temp\EWF5B9.tmp    #
 #                            (C:\Users\Jose\Desktop\IAR\Calculadora\Debug\Obj\ #
 #                            asm.r43                                           #
 #                            -o                                                #
@@ -121,13 +121,15 @@ Absolute parts
   PROGRAM MODULE, NAME : main
 
 Absolute parts
-     1C00 - 1C0A
+     1C00 - 1C2B
      FFFE - FFFF
            LOCAL                   ADDRESS         
            =====                   =======         
            __MSP430FR5922__        0000 
            digitH                  1C00 
-           size                    1C0A 
+           digitL                  1C0A 
+           segmentsHi              1C14 
+           segmentsL               1C20 
   SEGMENTS IN THE MODULE
   ======================
 CSTACK
@@ -135,7 +137,7 @@ CSTACK
   Segment part 0. ROOT 
     -------------------------------------------------------------------------
 <CODE> 1 (was CODE)
-  Relative segment, address: 4400 - 448D (0x8e bytes), align: 1
+  Relative segment, address: 4400 - 449D (0x9e bytes), align: 1
   Segment part 1. ROOT        Intra module refs:   Absolute parts
            ENTRY                   ADDRESS         REF BY
            =====                   =======         ======
@@ -145,9 +147,10 @@ CSTACK
            init                    4400 
            SetupPorts              4404 
            UnlockGPIO              443C 
-           calc                    4464 
-           delay                   4476 
-           changeNum               447E 
+           calc                    4462 
+           delay                   4478 
+           incNum                  4480 
+           changeSegment           4496 
 
 
 
@@ -162,8 +165,8 @@ CSTACK
 SEGMENT              SPACE    START ADDRESS   END ADDRESS     SIZE  TYPE  ALIGN
 =======              =====    =============   ===========     ====  ====  =====
 CSTACK                                 2360 - 23FF              A0   rel    1
-<CODE> 1                               4400 - 448D              8E   rel    1
-                                       1C00 - 1C0A               B  aseg  
+<CODE> 1                               4400 - 449D              9E   rel    1
+                                       1C00 - 1C2B              2C  aseg  
                                        FFFE - FFFF               2  aseg  
 
                 ****************************************
@@ -172,7 +175,7 @@ CSTACK                                 2360 - 23FF              A0   rel    1
                 *                                      *
                 ****************************************
 
- 142 bytes of CODE memory (+ 13 absolute )
+ 158 bytes of CODE memory (+ 46 absolute )
  160 bytes of DATA memory
 
 Errors: none

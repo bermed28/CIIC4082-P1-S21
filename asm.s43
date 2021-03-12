@@ -10,7 +10,11 @@
 
 ;Digits to represent
 digitH  db             0xFC, 0x60, 0xdb, 0xf1, 0x67, 0xB7, 0xBF, 0xE0, 0xFF, 0xE7
-size    db             6
+digitL  db              0x28,   0,    0,    0,    0,    0,    0,    0,    0,   0
+
+;Addresses for LCD Segments
+segmentsHi        dw  0x0A29, 0x0A25, 0x0A23, 0x0A32, 0x0A2E, 0x0A27
+segmentsL         dw  0x0A2A, 0x0A26, 0x0A24, 0x0A33, 0x0A2F, 0x0A28
 
 ;digitL  db             0x28,    0x20,    0x00,    0x00,    0x00,    0x00 
         RSEG    CSTACK                  ; pre-declaration of segment
@@ -59,17 +63,17 @@ UnlockGPIO:                           ;DIsbale GPIO power-on default
         ;;Turn on all segments on LCD
         ;CLR    R15
         
-         MOV.B  #0, R5          ;track index
-         MOV.B  #5, R14         ; Este registro indica el segmento en donde
-                                ; se dibuja el numero
-                                ; los segmentos son 9,5,3,E=14,7
+         MOV.B  #0, R5          ;Track index for digit to draw
+         MOV.B  #0, R14         ;Track index for segment to position in
 
 calc:
          MOV.B  &P1IN,R4        ;Reads if one of the pins have been pressed
          call   #delay
          and.b  #00000110B,R4
          CMP.B  #4,R4           ;Left button pressed.
-         JEQ    changeNum
+         JEQ    incNum          ;Increase the number in current segment
+         CMP.B  #00000010B,R4   ;Right button is pressed.
+         JEQ    changeSegment   ;Change segment to the right
          JMP    calc
         
 delay:
@@ -78,23 +82,24 @@ delay:
          mov    #0xFFFF, R10
          ret
 
-changeNum:
-         MOV.B  digitH(R5), 0x0a20(R14)
-         INC    R5
-         call   #delay
-         JMP    calc
-
-;dos:    MOV.W   #2, &LCDCMEMCTL
-;        MOV.B   #5,R14
-;        MOV.B   #0,R5
-;        MOV.B   #0x60, 0x0a20(R14)
-;        MOV.B   0x0a20(R14), R5
+incNum:
         
-;nextDigit:
-;        MOV.B   digitH(R5),0x0a20(R14)
-;        INC     R5
-;        CMP     #6,R5
-;        jnz     nextDigit
+         push   R8            ;To restore default value
+         
+         MOV    #segmentsHi, R8 ;Store beginning address of segments in R8
+         add    R14, R8       ;Add the index everytime to position ourselves in correct segment
+         mov    0(R8),  R8    ;Move that value (segment) and store it in R8
+         MOV.B  digitH(R5), 0(R8)       ;Draw digit at said segment
+         INC    R5                      ;Increase digit index
+
+         pop    R8             ;Restore R8 original value
+         JMP    calc                    ;Jmp to calc
+
+changeSegment:
+         INC    R14             ;Increase segment index
+         MOV.B  #0, R5          ;Reset digit index
+         JMP    calc            
+         
         
         JMP $                           ; jump to current location '$'
                                         ; (endless loop)
