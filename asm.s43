@@ -16,7 +16,17 @@ digitL  db              0x28,   0,    0,    0,    0,    0,    0,    0,    0,   0
 segmentsHi        dw  0x0A29, 0x0A25, 0x0A23, 0x0A32, 0x0A2E, 0x0A27
 segmentsL         dw  0x0A2A, 0x0A26, 0x0A24, 0x0A33, 0x0A2F, 0x0A28
 
-;digitL  db             0x28,    0x20,    0x00,    0x00,    0x00,    0x00 
+;Operators to represent
+;+ = 0
+;- = 1
+;/ = 2
+;* = 3                    
+operatorsHi db 0x03, 0x03, 0x00, 0x03 ; High Bytes Table 
+operatorsLo db 0x50,   0,  0x28, 0xFA ; Low Bytes Table
+
+;State handler
+state   db      0
+
         RSEG    CSTACK                  ; pre-declaration of segment
         RSEG    CODE                    ; place program in 'CODE' segment
 
@@ -33,21 +43,15 @@ SetupPorts:
 	bis.b   #00000110B,&P1OUT       ; Set resistors for P1.1 and P1.2 as pull down
         bic.b   #0x01,&P1OUT            ; Clear P1.0 and P9.7 output latch to
 
-main:   NOP                             ; main program
-        MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
-    
+UnlockGPIO:                           ;DIsbale GPIO power-on default
+        bic.w   #LOCKLPM5, &PM5CTL0   ; high-impedance mode to activate 
+                                      ; previously configured port settings
+
         ;Enable LCD Segments 0 - 2; 26-43
         
         MOV.W   #0xffff, &LCDCPCTL0
         MOV.W   #0xfc3f, &LCDCPCTL1
         MOV.W   #0x0fff, &LCDCPCTL2
-        
-        mov    #0xFFFF, R10
-        
-
-UnlockGPIO:                           ;DIsbale GPIO power-on default
-        bic.w   #LOCKLPM5, &PM5CTL0   ; high-impedance mode to activate 
-                                      ; previously configured port settings
 
         MOV.W   #0x041e, &LCDCCTL0 ;Bin number to set up bits to control LCD and initialize
 
@@ -59,48 +63,203 @@ UnlockGPIO:                           ;DIsbale GPIO power-on default
         BIS.W   #1, &LCDCCTL0 ; Turn on LCD
         
         MOV.W   #2,&LCDCMEMCTL  ;clear LCD memory
-         
-        ;;Turn on all segments on LCD
-        ;CLR    R15
+
+main:   NOP                             ; main program
+        MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
         
-         MOV.B  #0, R5          ;Track index for digit to draw
-         MOV.B  #0, R14         ;Track index for segment to position in
+        mov    #0xFFFF, R10
+        MOV.B  #0, R5          ; track index of digit selected
+        MOV.B  #0, R4          ; track which button is pressed
+        MOV.B  #0, R14         ; track index of segment array
+
+        MOV.B  #0, R13          ; Registro utilizado para verificar cual de las
+                                ; subrutinas aritmeticas seran invocadas
+
+        MOV.B  #0, R12          ; Registro donde se guardara el valor del primer numero
+        MOV.B  #0, R11          ; Registro donde se guardara el segundo numero
+        MOV.W  #0, R9           ; Registro donde se guardara el resultado
+        MOV.B  #0, R8           ; indica cual de los 3 estados de la aplicacion esta     
+
+;;Cosas que hacer
+;Maybe tener algo que inicialice todo, no se
+;Hay que tener un state que indique lo que tenemos que hacer
+;El sistema tiene que ense~ar un 0 al principio, y un 0 cada vez que cambiamos de segmento
+
+MainCheckState:
+         CMP.B  #0, R8
+         JEQ    calc
+         CMP.B  #1, R8
+         JEQ    arthmloop
+         CMP.B  #2, R8
+         JEQ    calc
+         ;CMP.B  #3, R8
+         ;JEQ    showResult
+         ;CMP.B  #4, R8
+         ;JEQ    cleanUp ;Clean everything to restart operations
 
 calc:
          MOV.B  &P1IN,R4        ;Reads if one of the pins have been pressed
          call   #delay
+         call   #delay
          and.b  #00000110B,R4
          CMP.B  #4,R4           ;Left button pressed.
-         JEQ    incNum          ;Increase the number in current segment
-         CMP.B  #00000010B,R4   ;Right button is pressed.
-         JEQ    changeSegment   ;Change segment to the right
+         JEQ    startIncNum     ;Increase the number in current segment
+         CMP.B  #2,R4           ;Right button is pressed.
+         JEQ    startChangeSegment   ;Change segment to the right
          JMP    calc
-        
-delay:
-         dec    R10
-         jnz    delay
-         mov    #0xFFFF, R10
-         ret
 
-incNum:
-        
-         push   R8            ;To restore default value
+
+;Objetivo: Llamar incNum
+;Precondiciones: Estar en el estado 0 o 2
+;Postcondiciones: No hay
+;Autor: Jose Biescas
+;Fecha: 3/13/2021
+startIncNum:
+         call   #incNum
          
-         MOV    #segmentsHi, R8 ;Store beginning address of segments in R8
-         add    R14, R8       ;Add the index everytime to position ourselves in correct segment
-         mov    0(R8),  R8    ;Move that value (segment) and store it in R8
-         MOV.B  digitH(R5), 0(R8)       ;Draw digit at said segment
+         jmp    calc
+         
+;Objetivo: Dibujar los Hi and Lo bytes de los digitos en el segmento correspondiente
+;Precondiciones: R14 contiene el segmento en donde se van a dibujar los digitos, R5 contiene el indice del digito a dibujar
+;Postcondiciones: Los registros R6 y R7 no tendran efectos secundarios. El registro R5 no debe ser afectado por los otros estados del programa
+;Autor: Jose Biescas
+;Fecha: 3/11/2021
+incNum:        
+         push   R6            ;To restore default value
+         push   R7            ;To restore default value later
+         
+         MOV    #segmentsHi, R6 ;Store beginning address of segments in R6
+         MOV    #segmentsL, R7 ;Store beginning address of segmentsLo in R7
+         add    R14, R6       ;Add the index everytime to position ourselves in correct segment
+         add    R14, R7
+         
+         mov    0(R6),  R6    ;Move that value (segment) and store it in R6
+         mov    0(R7),  R7    ;Same for R7
+    
+         MOV.B  digitH(R5), 0(R6)       ;Draw digit at said segment
+         MOV.B  digitL(R5), 0(R7)
+         
+         pop    R7 ;restore
+         pop    R6 ;restore
+         
+         CMP.B  #9, R5
+         JEQ    resetIndex              ;Reset index if we're at 9 so that we can loop from 0-9
          INC    R5                      ;Increase digit index
 
-         pop    R8             ;Restore R8 original value
-         JMP    calc                    ;Jmp to calc
+         ret                            
+;Objetivo: Re-iniciar el indice de R5, para eso de volver a 0 despues de llegar al 9, o volver a '+' despues de llegar a '*'
+;Precondiciones: 
+;Postcondiciones: 
+;Autor: Jose Biescas
+;Fecha: 3/13/2021        
+resetIndex:
+         mov.b  #0, R5
+         jmp    return
 
+
+;Objetivo: Llamar changeSegment
+;Precondiciones: Estar en el estado 0, 1, o 2
+;Postcondiciones: No hay
+;Autor: Jose Biescas
+;Fecha: 3/13/2021
+startChangeSegment:
+         call   #changeSegment
+         
+         jmp    calc
+
+;Objetivo: Incrementar el registro R14, para indicar el indice actual y se re-inicia el indice de los digitos/operadores
+;Precondiciones: El boton derecho se debio tocar, solamente se llama si no estamos al final de los 3 digitos, o si escogimos operador
+;Postcondiciones:
+;Autor: Jose Biescas
+;Fecha: 3/11/2021
 changeSegment:
+         CMP.B  #3, R14
+         JEQ    changeState
          INC    R14             ;Increase segment index
          MOV.B  #0, R5          ;Reset digit index
-         JMP    calc            
+
+         ret  
+
+;TODO
+;Objetivo: Incrementar el registro R14, para indicar el indice actual y se re-inicia el indice de los digitos/operadores
+;Precondiciones: El boton derecho se debio tocar, solamente se llama si no estamos al final de los 3 digitos, o si escogimos operador
+;Postcondiciones:
+;Autor: Guillermo Betancourt
+;Fecha: 3/13/2021
+changeState:
+       inc R8
+       mov.b #0, R5
+       mov.b #0, R14
+       MOV.W #2,&LCDCMEMCTL  ;clear LCD memory
+       jmp MainCheckState
+
+
+; We make a seperate loop to get the arthm values until button pressed
+;Guillermo
+arthmloop:
+        MOV.B  &P1IN,R4        ;Reads if one of the pins have been pressed
+        call   #delay
+        and.b  #00000110B,R4
+        CMP.B  #4,R4           ;Left button pressed.
+        JEQ    changeOperator
+        CMP.B  #2,R4           ;Right button is pressed
+        JEQ    setOp
+
+;choose arthm op
+setOp:
+        mov.b  operatorsLo(R5), R13
+        jmp changeState
+
+;Objetivo: Dibujar los simbolos de las operaciones en el primer segmento del LCD
+;Precondiciones: R14 debe ser 0, R5 contiene el indice del operador a dibujar
+;Postcondiciones: Los registros R6 y R7 no tendran efectos secundarios. El registro R5 no debe ser afectado por los otros estados del programa 
+;Autor: Jose Biescas
+;Fecha: 3/13/2021
+changeOperator:
+         push   R6
+         push   R7
          
+         MOV    #segmentsHi,   R6
+         MOV    #segmentsL,   R7
+         add    R14, R6
+         add    R14, R7
+         
+         mov    0(R6), R6
+         mov    0(R7), R7
+         
+         MOV.B  operatorsHi(R5), 0(R6)
+         MOV.B  operatorsLo(R5), 0(R7)
+         
+         pop    R7
+         pop    R6  
+         
+         CMP.B  #3, R5
+         JEQ    resetIndex              ;Reset index if we're at '*'
+         INC    R5
+         ret
+
+;showResult:
+;we have to show value and reset registers
+;we would verify R13 to check which op
+         ;CMP.B  0x50, R13
+         ;JEQ
+         ;CMP.B  0, R13
+         ;JEQ
+         ;CMP.B  0x28, R13
+         ;JEQ
+         ;CMP.B  0xFA, R13
+
+
+return:
+        ret
         
+delay:
+         mov    #0xFFFF, R10
+next:
+         dec    R10
+         jnz    next
+         ret
+
         JMP $                           ; jump to current location '$'
                                         ; (endless loop)
         END

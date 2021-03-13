@@ -2,7 +2,7 @@
 #                                                                              #
 #      IAR Universal Linker V6.5.4.100                                         #
 #                                                                              #
-#           Link time     =  11/Mar/2021  20:20:31                             #
+#           Link time     =  13/Mar/2021  19:46:59                             #
 #           Target CPU    =  MSP430                                            #
 #           List file     =  C:\Users\Jose\Desktop\IAR\Calculadora\Debug\List\ #
 #                            Calculadora.map                                   #
@@ -11,7 +11,7 @@
 #                            Format: ubrof10                                   #
 #                            UBROF version 10.0.6                              #
 #                            Using library modules for C-SPY (-rt)             #
-#           Command line  =  -f C:\Users\Jose\AppData\Local\Temp\EWF5B9.tmp    #
+#           Command line  =  -f C:\Users\Jose\AppData\Local\Temp\EW693A.tmp    #
 #                            (C:\Users\Jose\Desktop\IAR\Calculadora\Debug\Obj\ #
 #                            asm.r43                                           #
 #                            -o                                                #
@@ -121,7 +121,7 @@ Absolute parts
   PROGRAM MODULE, NAME : main
 
 Absolute parts
-     1C00 - 1C2B
+     1C00 - 1C34
      FFFE - FFFF
            LOCAL                   ADDRESS         
            =====                   =======         
@@ -130,6 +130,9 @@ Absolute parts
            digitL                  1C0A 
            segmentsHi              1C14 
            segmentsL               1C20 
+           operatorsHi             1C2C 
+           operatorsLo             1C30 
+           state                   1C34 
   SEGMENTS IN THE MODULE
   ======================
 CSTACK
@@ -137,20 +140,30 @@ CSTACK
   Segment part 0. ROOT 
     -------------------------------------------------------------------------
 <CODE> 1 (was CODE)
-  Relative segment, address: 4400 - 449D (0x9e bytes), align: 1
+  Relative segment, address: 4400 - 4529 (0x12a bytes), align: 1
   Segment part 1. ROOT        Intra module refs:   Absolute parts
            ENTRY                   ADDRESS         REF BY
            =====                   =======         ======
-           main                    4422 
+           main                    4454 
            LOCAL                   ADDRESS         
            =====                   =======         
            init                    4400 
            SetupPorts              4404 
-           UnlockGPIO              443C 
-           calc                    4462 
-           delay                   4478 
-           incNum                  4480 
-           changeSegment           4496 
+           UnlockGPIO              4422 
+           MainCheckState          446E 
+           calc                    447A 
+           arthmloop               44D6 
+           delay                   4520 
+           startIncNum             4494 
+           startChangeSegment      44B8 
+           incNum                  449A 
+           resetIndex              44B4 
+           return                  451E 
+           changeSegment           44BE 
+           changeState             44CA 
+           changeOperator          44F0 
+           setOp                   44EA 
+           next                    4522 
 
 
 
@@ -165,8 +178,8 @@ CSTACK
 SEGMENT              SPACE    START ADDRESS   END ADDRESS     SIZE  TYPE  ALIGN
 =======              =====    =============   ===========     ====  ====  =====
 CSTACK                                 2360 - 23FF              A0   rel    1
-<CODE> 1                               4400 - 449D              9E   rel    1
-                                       1C00 - 1C2B              2C  aseg  
+<CODE> 1                               4400 - 4529             12A   rel    1
+                                       1C00 - 1C34              35  aseg  
                                        FFFE - FFFF               2  aseg  
 
                 ****************************************
@@ -175,7 +188,7 @@ CSTACK                                 2360 - 23FF              A0   rel    1
                 *                                      *
                 ****************************************
 
- 158 bytes of CODE memory (+ 46 absolute )
+ 298 bytes of CODE memory (+ 55 absolute )
  160 bytes of DATA memory
 
 Errors: none
