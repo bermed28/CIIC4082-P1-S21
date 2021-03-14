@@ -1,0 +1,130 @@
+#include "msp430.h"                     ; #define controlled include file
+
+
+
+        NAME    main                    ; module name
+
+
+
+        PUBLIC  main                    ; make the main label vissible
+
+                                        ; outside this module
+
+        ORG     0FFFEh
+
+        DC16    init                    ; set reset vector to 'init' label
+
+
+
+        RSEG    CSTACK                  ; pre-declaration of segment
+
+        RSEG    CODE                    ; place program in 'CODE' segment
+
+
+
+init:   MOV     #SFE(CSTACK), SP        ; set up stack
+
+
+
+main:   NOP                             ; main program
+
+        MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
+
+
+
+        
+        mov.w   #999, R11
+        mov.w   #999, R12
+        
+        call    #multiplication
+
+       
+
+        jmp finalize
+
+
+
+
+
+multiplication:
+
+		
+
+        push    R11
+
+        push    R12
+
+                
+
+        cmp.w   R11, R12
+
+        jn      swapSmallest            ;If R11 > R12, we swap the registers values
+
+        mov.w   #0x0, R9                ;Set our result to 0
+
+        mov.w   #0x0, R10               ;Set our overflow result to 0
+
+        jmp     start 
+
+        
+
+start:
+
+        ;Approach, sum number x (R12) a y (R11) amount of times to get multiplication
+
+        ;Example: 200 * 3 = sum 200 a total amount of 3 times
+
+
+
+        add.w   R12, R9                 ; We use R9 to store our result
+
+        adc.w   R10		        ; Add carry for numbers > 16 bits
+
+        dec     R11                     ; Decrement our counter
+
+        jz      return                  ; If we finished sum, return
+
+        jmp     start                   ; If not, continue
+
+        
+
+        
+
+swapSmallest:
+
+        mov.w   R11, R9                 ; temp (R9) = R11
+
+        mov.w   R12, R11                ; R11 = R12
+
+        mov.w   R9, R12                 ; R12 = temp
+
+        mov.w   #0x0, R9                ; Reset result to 0
+
+        mov.w   #0x0, R10               ; Set our overflow result to 0
+
+        jmp     start
+
+        
+
+return:
+
+        pop    R12
+
+        pop    R11
+
+
+
+        ret
+
+
+
+finalize:
+
+
+
+        JMP $                           ; jump to current location '$'
+
+        NOP                             ; (endless loop)
+
+        END
+
