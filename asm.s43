@@ -72,8 +72,8 @@ main:   NOP                             ; main program
         MOV.B  #0, R4          ; track which button is pressed
         MOV.B  #0, R14         ; track index of segment array
 
-        MOV.B  #0, R13          ; Registro utilizado para verificar cual de las
-                                ; subrutinas aritmeticas seran invocadas
+        MOV.B  #0x0099, R13          ; Registro utilizado para verificar cual de las
+                                 ; subrutinas aritmeticas seran invocadas. #99 indica que no se ha escogido una operacion
 
         MOV.B  #0, R12          ; Registro donde se guardara el valor del primer numero
         MOV.B  #0, R11          ; Registro donde se guardara el segundo numero
@@ -99,7 +99,6 @@ MainCheckState:
 
 calc:
          MOV.B  &P1IN,R4        ;Reads if one of the pins have been pressed
-         call   #delay
          call   #delay
          and.b  #00000110B,R4
          CMP.B  #4,R4           ;Left button pressed.
@@ -130,6 +129,7 @@ incNum:
          
          MOV    #segmentsHi, R6 ;Store beginning address of segments in R6
          MOV    #segmentsL, R7 ;Store beginning address of segmentsLo in R7
+
          add    R14, R6       ;Add the index everytime to position ourselves in correct segment
          add    R14, R7
          
@@ -173,9 +173,9 @@ startChangeSegment:
 ;Autor: Jose Biescas
 ;Fecha: 3/11/2021
 changeSegment:
-         CMP.B  #3, R14
+         CMP.B  #4, R14
          JEQ    changeState
-         INC    R14             ;Increase segment index
+         INCD.W    R14             ;Increase segment index
          MOV.B  #0, R5          ;Reset digit index
 
          ret  
@@ -187,7 +187,8 @@ changeSegment:
 ;Autor: Guillermo Betancourt
 ;Fecha: 3/13/2021
 changeState:
-       inc R8
+       call     #delay
+       inc.B R8
        mov.b #0, R5
        mov.b #0, R14
        MOV.W #2,&LCDCMEMCTL  ;clear LCD memory
@@ -197,18 +198,29 @@ changeState:
 ; We make a seperate loop to get the arthm values until button pressed
 ;Guillermo
 arthmloop:
+        MOV.B  #0, R4
         MOV.B  &P1IN,R4        ;Reads if one of the pins have been pressed
         call   #delay
         and.b  #00000110B,R4
         CMP.B  #4,R4           ;Left button pressed.
-        JEQ    changeOperator
+        JEQ    startChangeOperator
         CMP.B  #2,R4           ;Right button is pressed
         JEQ    setOp
+        JMP    arthmloop
 
 ;choose arthm op
 setOp:
-        mov.b  operatorsLo(R5), R13
+        DEC     R5
+        MOV.B   operatorsLo(R5), R13
+        CMP.B   #0x0099, R13
+        JEQ     arthmloop
         jmp changeState
+
+startChangeOperator:
+        call    #changeOperator
+        
+        jmp     arthmloop
+
 
 ;Objetivo: Dibujar los simbolos de las operaciones en el primer segmento del LCD
 ;Precondiciones: R14 debe ser 0, R5 contiene el indice del operador a dibujar
