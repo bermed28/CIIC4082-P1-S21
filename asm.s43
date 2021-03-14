@@ -20,8 +20,8 @@ segmentsL         dw  0x0A2A, 0x0A26, 0x0A24, 0x0A33, 0x0A2F, 0x0A28
 ;+ = 0
 ;- = 1
 ;/ = 2
-;* = 3                    
-operatorsHi db 0x03, 0x03, 0x00, 0x03 ; High Bytes Table 
+;* = 3
+operatorsHi db 0x03, 0x03, 0x00, 0x03 ; High Bytes Table
 operatorsLo db 0x50,   0,  0x28, 0xFA ; Low Bytes Table
 
 ;State handler
@@ -37,18 +37,18 @@ SetupPorts:
         bic.b   #0xFF,&P1SEL0           ; Set PxSel0 and PxSel1 to digital I/O
         bic.b   #0xFF,&P1SEL1           ; Digital I/O is the default
 
-	mov.b   #11111001B,&P1DIR       ; Set P1.1 and P1.2 for input
-	mov.b   #00000110B,&P1REN       ; Activate P1.1 and P1.2 programable
+                mov.b   #11111001B,&P1DIR       ; Set P1.1 and P1.2 for input
+                mov.b   #00000110B,&P1REN       ; Activate P1.1 and P1.2 programable
                                         ; pull-up/pull-down resistors
-	bis.b   #00000110B,&P1OUT       ; Set resistors for P1.1 and P1.2 as pull down
+                bis.b   #00000110B,&P1OUT       ; Set resistors for P1.1 and P1.2 as pull down
         bic.b   #0x01,&P1OUT            ; Clear P1.0 and P9.7 output latch to
 
 UnlockGPIO:                           ;DIsbale GPIO power-on default
-        bic.w   #LOCKLPM5, &PM5CTL0   ; high-impedance mode to activate 
+        bic.w   #LOCKLPM5, &PM5CTL0   ; high-impedance mode to activate
                                       ; previously configured port settings
 
         ;Enable LCD Segments 0 - 2; 26-43
-        
+
         MOV.W   #0xffff, &LCDCPCTL0
         MOV.W   #0xfc3f, &LCDCPCTL1
         MOV.W   #0x0fff, &LCDCPCTL2
@@ -61,12 +61,12 @@ UnlockGPIO:                           ;DIsbale GPIO power-on default
         MOV.W   #2,&LCDCMEMCTL  ;clear LCD memory
 
         BIS.W   #1, &LCDCCTL0 ; Turn on LCD
-        
+
         MOV.W   #2,&LCDCMEMCTL  ;clear LCD memory
 
 main:   NOP                             ; main program
         MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
-        
+
         mov    #0xFFFF, R10
         MOV.B  #0, R5          ; track index of digit selected
         MOV.B  #0, R4          ; track which button is pressed
@@ -78,7 +78,7 @@ main:   NOP                             ; main program
         MOV.B  #0, R12          ; Registro donde se guardara el valor del primer numero
         MOV.B  #0, R11          ; Registro donde se guardara el segundo numero
         MOV.W  #0, R9           ; Registro donde se guardara el resultado
-        MOV.B  #0, R8           ; indica cual de los 3 estados de la aplicacion esta     
+        MOV.B  #0, R8           ; indica cual de los 3 estados de la aplicacion esta
 
 ;;Cosas que hacer
 ;Maybe tener algo que inicialice todo, no se
@@ -92,8 +92,8 @@ MainCheckState:
          JEQ    arthmloop
          CMP.B  #2, R8
          JEQ    calc
-         ;CMP.B  #3, R8
-         ;JEQ    showResult
+         CMP.B  #3, R8
+         JEQ    showResult
          ;CMP.B  #4, R8
          ;JEQ    cleanUp ;Clean everything to restart operations
 
@@ -115,43 +115,43 @@ calc:
 ;Fecha: 3/13/2021
 startIncNum:
          call   #incNum
-         
+
          jmp    calc
-         
+
 ;Objetivo: Dibujar los Hi and Lo bytes de los digitos en el segmento correspondiente
 ;Precondiciones: R14 contiene el segmento en donde se van a dibujar los digitos, R5 contiene el indice del digito a dibujar
 ;Postcondiciones: Los registros R6 y R7 no tendran efectos secundarios. El registro R5 no debe ser afectado por los otros estados del programa
 ;Autor: Jose Biescas
 ;Fecha: 3/11/2021
-incNum:        
+incNum:
          push   R6            ;To restore default value
          push   R7            ;To restore default value later
-         
+
          MOV    #segmentsHi, R6 ;Store beginning address of segments in R6
          MOV    #segmentsL, R7 ;Store beginning address of segmentsLo in R7
 
          add    R14, R6       ;Add the index everytime to position ourselves in correct segment
          add    R14, R7
-         
+
          mov    0(R6),  R6    ;Move that value (segment) and store it in R6
          mov    0(R7),  R7    ;Same for R7
-    
+
          MOV.B  digitH(R5), 0(R6)       ;Draw digit at said segment
          MOV.B  digitL(R5), 0(R7)
-         
+
          pop    R7 ;restore
          pop    R6 ;restore
-         
+
          CMP.B  #9, R5
          JEQ    resetIndex              ;Reset index if we're at 9 so that we can loop from 0-9
          INC    R5                      ;Increase digit index
 
-         ret                            
+         ret
 ;Objetivo: Re-iniciar el indice de R5, para eso de volver a 0 despues de llegar al 9, o volver a '+' despues de llegar a '*'
-;Precondiciones: 
-;Postcondiciones: 
+;Precondiciones:
+;Postcondiciones:
 ;Autor: Jose Biescas
-;Fecha: 3/13/2021        
+;Fecha: 3/13/2021
 resetIndex:
          mov.b  #0, R5
          jmp    return
@@ -163,8 +163,11 @@ resetIndex:
 ;Autor: Jose Biescas
 ;Fecha: 3/13/2021
 startChangeSegment:
+
+
+         call   #translateLCD
          call   #changeSegment
-         
+
          jmp    calc
 
 ;Objetivo: Incrementar el registro R14, para indicar el indice actual y se re-inicia el indice de los digitos/operadores
@@ -178,7 +181,94 @@ changeSegment:
          INCD.W    R14             ;Increase segment index
          MOV.B  #0, R5          ;Reset digit index
 
-         ret  
+         ret
+
+;el primer segmento se multiplicara por 100, el segundo por 10 y el primero sumamos
+;se realizara cada vez que se escribe un numero
+;el estado de la applicacion nos indica en que registro guardar el valor
+
+translateLCD:
+        mov R5, R6
+        dec r6
+        cmp.b  #3, R8
+        jeq    retu
+        cmp.b  #4, R8
+        jeq    retu
+        CMP.B  #0, R14
+        jeq    addH
+        CMP.B  #2, R14
+        jeq    addD
+        CMP.B  #4, R14
+        jeq    addU
+
+
+retu:
+        nop
+        ret
+
+addH:
+        cmp.b #0, R8
+        jeq   addfvH
+        cmp.b #2, R8
+        jeq   addsvH
+
+
+addfvH:
+        cmp.b #0, R6
+        jeq   retu
+        add.b   #100, R12
+        dec   R6
+        jmp   addfvH
+
+addsvH:
+        cmp.b #0, R6
+        jeq   retu
+        add.b   #100, R11
+        dec   R6
+        jmp   addsvH
+
+
+addD:
+
+        cmp.b #0, R8
+        jeq   addfvD
+        cmp.b #2, R8
+        jeq   addsvD
+
+
+
+addfvD:
+
+        cmp.b #0, R6
+        jeq   retu
+        add.b   #10, R12
+        dec   R6
+        jmp   addfvD
+
+addsvD:
+
+        cmp.b #0, R6
+        jeq   retu
+        add.b   #10, R11
+        dec   R6
+        jmp   addsvD
+addU:
+
+        cmp.b #0, R8
+        jeq   addfvU
+        cmp.b #2, R8
+        jeq   addsvU
+
+
+
+addfvU:
+        add.b   R6, R12
+        jmp retu
+
+addsvU:
+        add.b   R6, R11
+        jmp retu
+
 
 ;TODO
 ;Objetivo: Incrementar el registro R14, para indicar el indice actual y se re-inicia el indice de los digitos/operadores
@@ -218,33 +308,33 @@ setOp:
 
 startChangeOperator:
         call    #changeOperator
-        
+
         jmp     arthmloop
 
 
 ;Objetivo: Dibujar los simbolos de las operaciones en el primer segmento del LCD
 ;Precondiciones: R14 debe ser 0, R5 contiene el indice del operador a dibujar
-;Postcondiciones: Los registros R6 y R7 no tendran efectos secundarios. El registro R5 no debe ser afectado por los otros estados del programa 
+;Postcondiciones: Los registros R6 y R7 no tendran efectos secundarios. El registro R5 no debe ser afectado por los otros estados del programa
 ;Autor: Jose Biescas
 ;Fecha: 3/13/2021
 changeOperator:
          push   R6
          push   R7
-         
+
          MOV    #segmentsHi,   R6
          MOV    #segmentsL,   R7
          add    R14, R6
          add    R14, R7
-         
+
          mov    0(R6), R6
          mov    0(R7), R7
-         
+
          MOV.B  operatorsHi(R5), 0(R6)
          MOV.B  operatorsLo(R5), 0(R7)
-         
+
          pop    R7
-         pop    R6  
-         
+         pop    R6
+
          CMP.B  #3, R5
          JEQ    resetIndex              ;Reset index if we're at '*'
          INC    R5
@@ -262,9 +352,10 @@ changeOperator:
          ;CMP.B  0xFA, R13
 
 
+
 return:
         ret
-        
+
 delay:
          mov    #0xFFFF, R10
 next:
