@@ -1,0 +1,22 @@
+division:
+        cmp.w   #1, R9
+        jge     startDivision
+        ret
+        
+startDivision:
+        push    R8                     ;we'll manipulate R8 (R8 / R9)
+        mov.w   #0, R10                ;R10 returns the coecient 
+        sub.w   R9, R8
+        cmp.w   #0, R8
+        JGE     keepSubstracting
+        pop     R8                      ;restore value
+        ret
+        
+keepSubstracting:
+        inc     R10
+        sub.w   R9, R8
+        cmp.w   #0, R8
+        JGE     keepSubstracting
+        pop     R8                      ;restore value
+        ret       
+      
