@@ -1,0 +1,51 @@
+extractDigits:
+        push    R5                      ;R5 contiene el valor completo          
+        mov.b   #0, R6                  ;R6: arreglo de digitos
+        jmp     keepExtracting
+        
+keepExtracting:
+        call    #module10
+        inc     R6
+        mov.b   R9, 0(R6)
+        call    #division10
+        mov.w   R9, R5
+        cmp.w   #1, R5
+        JGE     keepExtracting          ;TODO (if not equal to 0)
+        pop     R5
+        ret
+        
+division10:
+        push    R5                       ;we'll manipulate R5 (R5 / 10)
+        mov.w   #0, R9                   ;R9 returns the coecient (result)
+        sub.w   #10, R5
+        cmp.w   #0, R5
+        JGE     keepSubstractingDiv10
+        pop     R5                      ;restore value
+        ret
+        
+keepSubstractingDiv10:
+        inc     R9
+        sub.w   #10, R5
+        cmp.w   #0, R5
+        JGE     keepSubstractingDiv10
+        pop     R5                      ;restore value
+        ret                
+
+module10:
+        push    R5                       ;we'll manipulate R5(R5 mod 10)              
+        sub.w   #10, R5
+        cmp.w   #0, R5
+        JGE     keepSubstractingMod10
+        add.w   #10, R5
+        mov.w   R5, R9                  ;R9 returns the "residuo" (result)
+        pop     R5                      ;restore value
+        ret
+        
+keepSubstractingMod10:
+        sub.w   #10, R5
+        cmp.w   #0, R5
+        JGE     keepSubstractingMod10
+        add.w   #10, R5
+        mov.w   R5, R9                  ;R9 returns the "residuo" (result)
+        pop     R5                      ;restore value
+        ret       
