@@ -11,6 +11,7 @@
 ;Digits to represent
 digitH  db             0xFC, 0x60, 0xdb, 0xf1, 0x67, 0xB7, 0xBF, 0xE0, 0xFF, 0xE7
 digitL  db              0x28,   0,    0,    0,    0,    0,    0,    0,    0,   0
+result  db               0,0,0,0,0,0
 
 ;Addresses for LCD Segments
 segmentsHi        dw  0x0A29, 0x0A25, 0x0A23, 0x0A32, 0x0A2E, 0x0A27
@@ -75,8 +76,8 @@ main:   NOP                             ; main program
         MOV.B  #0x0099, R13          ; Registro utilizado para verificar cual de las
                                  ; subrutinas aritmeticas seran invocadas. #99 indica que no se ha escogido una operacion
 
-        MOV.B  #0, R12          ; Registro donde se guardara el valor del primer numero
-        MOV.B  #0, R11          ; Registro donde se guardara el segundo numero
+        MOV.W  #0, R12          ; Registro donde se guardara el valor del primer numero
+        MOV.W  #0, R11          ; Registro donde se guardara el segundo numero
         MOV.W  #0, R9           ; Registro donde se guardara el resultado
         MOV.B  #0, R8           ; indica cual de los 3 estados de la aplicacion esta
 
@@ -216,14 +217,14 @@ addH:
 addfvH:
         cmp.b #0, R6
         jeq   retu
-        add.b   #100, R12
+        add   #100, R12
         dec   R6
         jmp   addfvH
 
 addsvH:
         cmp.b #0, R6
         jeq   retu
-        add.b   #100, R11
+        add   #100, R11
         dec   R6
         jmp   addsvH
 
@@ -235,13 +236,11 @@ addD:
         cmp.b #2, R8
         jeq   addsvD
 
-
-
 addfvD:
 
         cmp.b #0, R6
         jeq   retu
-        add.b   #10, R12
+        add   #10, R12
         dec   R6
         jmp   addfvD
 
@@ -249,7 +248,7 @@ addsvD:
 
         cmp.b #0, R6
         jeq   retu
-        add.b   #10, R11
+        add   #10, R11
         dec   R6
         jmp   addsvD
 addU:
@@ -259,15 +258,13 @@ addU:
         cmp.b #2, R8
         jeq   addsvU
 
-
-
 addfvU:
-        add.b   R6, R12
+        add   R6, R12
         jmp retu
 
 addsvU:
         add.b   R6, R11
-        jmp retu
+        jmp return
 
 
 ;TODO
@@ -340,21 +337,149 @@ changeOperator:
          INC    R5
          ret
 
-;showResult:
+showResult:
 ;we have to show value and reset registers
 ;we would verify R13 to check which op
-         ;CMP.B  0x50, R13
-         ;JEQ
-         ;CMP.B  0, R13
-         ;JEQ
-         ;CMP.B  0x28, R13
-         ;JEQ
-         ;CMP.B  0xFA, R13
+         CMP.B  #0x50, R13
+         JEQ    addition
+         CMP.B  #0, R13
+         ;JEQ    substraction
+         ;CMP.B  #0x28, R13
+         JEQ    division
+         CMP.B  #0xFA, R13
+         JEQ    multiplication
+         jmp    showNumber
 
+showNumber:
+       call     #extractDigits
+       jmp      $
+
+
+addition:
+        add R12, R11
+        mov r11, r9
+        jmp showNumber
+
+
+multiplication:
+        push    R11
+        push    R12
+        cmp.w   R11, R12
+        jn      swapSmallest            ;If R11 > R12, we swap the registers values
+        mov.w   #0x0, R9                ;Set our result to 0
+        mov.w   #0x0, R10               ;Set our overflow result to 0
+        jmp     start
+
+
+
+
+start:
+        ;Approach, sum number x (R12) a y (R11) amount of times to get multiplication
+        ;Example: 200 * 3 = sum 200 a total amount of 3 times
+
+        add.w   R12, R9                 ; We use R9 to store our result
+        adc.w   R10                         ; Add carry for numbers > 16 bits
+        dec     R11                     ; Decrement our counter
+        jz      finishM                  ; If we finished sum, return
+        jmp     start                   ; If not, continue
+
+
+swapSmallest:
+
+        mov.w   R11, R9                 ; temp (R9) = R11
+        mov.w   R12, R11                ; R11 = R12
+        mov.w   R9, R12                 ; R12 = temp
+        mov.w   #0x0, R9                ; Reset result to 0
+        mov.w   #0x0, R10               ; Set our overflow result to 0
+        jmp     start
+
+
+finishM:
+        pop    R12
+        pop    R11
+        jmp showNumber
+
+division:
+        cmp.w   #1, R11
+        jge     startDivision
+        jmp     showNumber
+
+startDivision:
+        push    R12                     ;we'll manipulate R12 (R12 / R11)
+        mov.w   #0, R9                   ;R9 returns the coecient (result)
+        sub.w   R11, R12
+        cmp.w   #0, R12
+        JGE     keepSubstracting
+        pop     R12                      ;restore value
+        jmp     showNumber
+
+keepSubstracting:
+        inc     R9
+        sub.w   R11, R12
+        cmp.w   #0, R12
+        JGE     keepSubstracting
+        pop     R12                      ;restore value
+        jmp     showNumber
+
+
+extractDigits:
+        push    R5                      ;R5 contiene el valor completo
+        mov.b   #0, R6                  ;R6: arreglo de digitos
+        jmp     keepExtracting
+
+keepExtracting:
+        call    #module10
+        inc     R6
+        mov.b   R9, result(R6)
+        call    #division10
+        mov.w   R9, R5
+        cmp.w   #1, R5
+        JGE     keepExtracting          ;TODO (if not equal to 0)
+        pop     R5
+        ret
+
+division10:
+        push    R5                       ;we'll manipulate R5 (R5 / 10)
+        mov.w   #0, R9                   ;R9 returns the coecient (result)
+        sub.w   #10, R5
+        cmp.w   #0, R5
+        JGE     keepSubstractingDiv10
+        pop     R5                      ;restore value
+        ret
+
+keepSubstractingDiv10:
+        inc     R9
+        sub.w   #10, R5
+        cmp.w   #0, R5
+        JGE     keepSubstractingDiv10
+        pop     R5                      ;restore value
+        ret
+
+module10:
+        push    R5                       ;we'll manipulate R5(R5 mod 10)
+        sub.w   #10, R5
+        cmp.w   #0, R5
+        JGE     keepSubstractingMod10
+        add.w   #10, R5
+        mov.w   R5, R9                  ;R9 returns the "residuo" (result)
+        pop     R5                      ;restore value
+        ret
+
+keepSubstractingMod10:
+        sub.w   #10, R5
+        cmp.w   #0, R5
+        JGE     keepSubstractingMod10
+        add.w   #10, R5
+        mov.w   R5, R9                  ;R9 returns the "residuo" (result)
+        pop     R5                      ;restore value
+        ret
 
 
 return:
         ret
+
+
+
 
 delay:
          mov    #0xFFFF, R10
