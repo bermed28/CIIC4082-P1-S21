@@ -521,7 +521,7 @@ showNumber:
 
 ;Objetivo:  Verificar si el resultado es negativo.
 ;Precondiciones: R9 es el valor del resultado
-;Postcondiciones:
+;Postcondiciones: El valor absoluto del número en R9 se guarda en R9. De ser negativo, se coloca el signo "-".
 ;Autor: Veronica Bernier
 ;Fecha: 3/14/2021
 considerNegative:
@@ -532,11 +532,8 @@ considerNegative:
 
 isNegative:
        mov      #0x04, &0xA2A   ;show negative sign
-       //mov      #0, &0xA29
-       //TODO: turn positive
        xor.w    #0xFFFF, R9
        inc       R9
-       //mov.w    #123, R9
 
        ret
 
@@ -745,7 +742,7 @@ finishM:
 
 ;Objetivo: Guardar la division de R12 entre R11 en R9 luego de validar que R11 no sea 0.
 ;Precondiciones: R12 contiene lel primer valor y R11 el segundo
-;Postcondiciones: Los registros R11 y R12 no tendran efectos secundarios. El registro R9 sera alterado.
+;Postcondiciones: Los registros R11 y R12 no tendran efectos secundarios. El registro R9 sera alterado con el resultado.
 ;Autor: Ver�nica Bernier
 ;Fecha: 3/12/2021
 division:
