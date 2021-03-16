@@ -5,13 +5,13 @@
     <configuration>
         <name>Debug</name>
         <outputs>
-            <file>$PROJ_DIR$\Debug\Obj\asm.r43</file>
-            <file>$PROJ_DIR$\Debug\Exe\Calculadora.d43</file>
-            <file>$TOOLKIT_DIR$\inc\msp430.h</file>
             <file>$TOOLKIT_DIR$\config\linker\lnk430fr6989.xcl</file>
-            <file>$PROJ_DIR$\asm.s43</file>
+            <file>$PROJ_DIR$\Debug\Exe\Calculadora.d43</file>
             <file>$TOOLKIT_DIR$\inc\msp430fr6989.h</file>
+            <file>$PROJ_DIR$\Debug\Obj\asm.r43</file>
+            <file>$TOOLKIT_DIR$\inc\msp430.h</file>
             <file>$TOOLKIT_DIR$\config\linker\multiplier32.xcl</file>
+            <file>$PROJ_DIR$\asm.s43</file>
             <file>$PROJ_DIR$\Debug\List\Calculadora.map</file>
         </outputs>
         <file>
@@ -34,7 +34,7 @@
             <inputs>
                 <tool>
                     <name>XLINK</name>
-                    <file> 3 6 0</file>
+                    <file> 0 5 3</file>
                 </tool>
             </inputs>
         </file>
@@ -43,13 +43,13 @@
             <outputs>
                 <tool>
                     <name>A430</name>
-                    <file> 0</file>
+                    <file> 3</file>
                 </tool>
             </outputs>
             <inputs>
                 <tool>
                     <name>A430</name>
-                    <file> 2 5</file>
+                    <file> 4 2</file>
                 </tool>
             </inputs>
         </file>

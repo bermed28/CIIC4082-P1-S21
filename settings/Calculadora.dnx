@@ -61,7 +61,7 @@
         <Counter1>0000000000000000000000000000000000000000000000000000000000000000</Counter1>
     </EEM_Cycle_Counter_1>
     <DebugChecksum>
-        <Checksum>1578038938</Checksum>
+        <Checksum>2555080610</Checksum>
     </DebugChecksum>
     <CallStack>
         <ShowArgs>0</ShowArgs>
@@ -127,7 +127,8 @@
     </Memory_Dump>
     <Aliases>
         <A0>_ "C:\Users\Jose\Desktop\IAR\Calculadora\asm.s43" "C:\Users\fjbm1\Desktop\CIIC4082\CIIC4082-P1-S21\asm.s43"</A0>
-        <Count>1</Count>
+        <A1>_ "C:\Users\fjbm1\Desktop\CIIC4082\CIIC4082-P1-S21\asm.s43" ""</A1>
+        <Count>2</Count>
         <SuppressDialog>0</SuppressDialog>
     </Aliases>
 </settings>

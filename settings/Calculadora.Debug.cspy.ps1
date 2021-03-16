@@ -23,9 +23,9 @@
 
 if ($debugfile -eq "")
 {
-& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "C:\Users\fjbm1\Desktop\CIIC4082\CIIC4082-P1-S21\settings\Calculadora.Debug.general.xcl" --backend -f "C:\Users\fjbm1\Desktop\CIIC4082\CIIC4082-P1-S21\settings\Calculadora.Debug.driver.xcl" 
+& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "C:\Users\Jose\Desktop\IAR\Calculadora\settings\Calculadora.Debug.general.xcl" --backend -f "C:\Users\Jose\Desktop\IAR\Calculadora\settings\Calculadora.Debug.driver.xcl" 
 }
 else
 {
-& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "C:\Users\fjbm1\Desktop\CIIC4082\CIIC4082-P1-S21\settings\Calculadora.Debug.general.xcl" --debug_file=$debugfile --backend -f "C:\Users\fjbm1\Desktop\CIIC4082\CIIC4082-P1-S21\settings\Calculadora.Debug.driver.xcl" 
+& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "C:\Users\Jose\Desktop\IAR\Calculadora\settings\Calculadora.Debug.general.xcl" --debug_file=$debugfile --backend -f "C:\Users\Jose\Desktop\IAR\Calculadora\settings\Calculadora.Debug.driver.xcl" 
 }

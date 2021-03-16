@@ -165,7 +165,12 @@ calc:
          CMP.B  #2,R4           ;Right button is pressed.
          JEQ    startChangeSegment   ;Change segment to the right
          JMP    calc
-
+         
+;Objetivo: Reset el indice guardado en R5 cuando su valor sea 9 para poder hacer un loop a traves de los digitos, si no, incrementar R5 y continuar el proceso.
+;Precondiciones: R8 debe ser igual a 0 o 2, indicando que estamos escogiendo los digitos a utilizar
+;Postcondiciones: No hay postcondiciones
+;Autor: Jose Biescas
+;Fecha: 3/16/2021
 checkDigit:
          
          CMP.B  #9, R5
@@ -360,7 +365,11 @@ arthmloop:
         JEQ    setOp
         JMP    arthmloop
 
-
+;Objetivo: Reset el indice guardado en R5 cuando su valor sea 3 para poder hacer un loop a traves de las operaciones, si no, incrementar R5 y continuar el proceso.
+;Precondiciones: R8 debe ser igual a 1, indicando que estamos escogiendo la opereacion a realizar
+;Postcondiciones: No hay postcondiciones
+;Autor: Jose Biescas
+;Fecha: 3/16/2021
 checkOperator:
          CMP.B  #3, R5
          JEQ    resetIndex              ;Reset index if we're at '*'
@@ -666,6 +675,11 @@ division:
         jmp     showError
         ;jmp     showNumber
 
+;Objetivo: Demostrar que ocurrio un error al intentar de dividir por 0.
+;Precondiciones: El segundo numero (R11) debe ser 0.
+;Postcondiciones: Se mostrara la palabra ERROR en el LCD.
+;Autor: Jose Biescas
+;Fecha: 3/16/2021
 showError:
          push   R4
          push   R9
@@ -805,6 +819,11 @@ keepSubstractingMod10:
         pop     R9                      ;restore value
         ret 
 
+;Objetivo: Escuchar por input del boton derecho, para asi comenzar el proceso de reset el sistema.
+;Precondiciones: El resultado de la operacion debe estar mostrado en el LCD.
+;Postcondiciones: Todos los registros, la memoria del LCD, etc, seran restaurados a sus valores iniciales.
+;Autor: Jose Biescas
+;Fecha: 3/16/2021  
 restartLoop:
         MOV.B  &P1IN,R4        ;Reads if one of the pins have been pressed
         call   #delay
