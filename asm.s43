@@ -80,11 +80,61 @@ main:   NOP                             ; main program
         MOV.W  #0, R11          ; Registro donde se guardara el segundo numero
         MOV.W  #0, R9           ; Registro donde se guardara el resultado
         MOV.B  #0, R8           ; indica cual de los 3 estados de la aplicacion esta
+        MOV.B  #0, R7
 
-;;Cosas que hacer
-;Maybe tener algo que inicialice todo, no se
-;Hay que tener un state que indique lo que tenemos que hacer
-;El sistema tiene que ense~ar un 0 al principio, y un 0 cada vez que cambiamos de segmento
+
+
+initialValue:
+         CMP.b  #1,r8
+         JEQ    operator
+         jmp    zero
+
+
+
+zero:
+         push   R6            ;To restore default value
+         push   R7            ;To restore default value later
+
+         MOV    #segmentsHi, R6 ;Store beginning address of segments in R6
+         MOV    #segmentsL, R7 ;Store beginning address of segmentsLo in R7
+
+         add    R14, R6       ;Add the index everytime to position ourselves in correct segment
+         add    R14, R7
+
+         mov    0(R6),  R6    ;Move that value (segment) and store it in R6
+         mov    0(R7),  R7    ;Same for R7
+
+         MOV.B  digitH(R5), 0(R6)       ;Draw digit at said segment
+         MOV.B  digitL(R5), 0(R7)
+
+         pop    R7 ;restore
+         pop    R6 ;restore
+         INC    R5
+         jmp    MainCheckState
+
+
+
+operator:
+         push   R6            ;To restore default value
+         push   R7            ;To restore default value later
+
+         MOV    #segmentsHi, R6 ;Store beginning address of segments in R6
+         MOV    #segmentsL, R7 ;Store beginning address of segmentsLo in R7
+
+         add    R14, R6       ;Add the index everytime to position ourselves in correct segment
+         add    R14, R7
+
+         mov    0(R6),  R6    ;Move that value (segment) and store it in R6
+         mov    0(R7),  R7    ;Same for R7
+
+         MOV.B operatorsHi(R5), 0(R6)       ;Draw digit at said segment
+         MOV.B operatorsLo(R5), 0(R7)
+
+         pop    R7 ;restore
+         pop    R6 ;restore
+         INC    R5
+         jmp    MainCheckState
+
 
 MainCheckState:
          CMP.B  #0, R8
@@ -104,7 +154,7 @@ calc:
          and.b  #00000110B,R4
          CMP.B  #4,R4           ;Left button pressed.
          JEQ    startIncNum     ;Increase the number in current segment
-         CMP.B  #2,R4           ;Right button is pressed.
+        CMP.B  #2,R4           ;Right button is pressed.
          JEQ    startChangeSegment   ;Change segment to the right
          JMP    calc
 
@@ -169,7 +219,7 @@ startChangeSegment:
          call   #translateLCD
          call   #changeSegment
 
-         jmp    calc
+         jmp    initialValue
 
 ;Objetivo: Incrementar el registro R14, para indicar el indice actual y se re-inicia el indice de los digitos/operadores
 ;Precondiciones: El boton derecho se debio tocar, solamente se llama si no estamos al final de los 3 digitos, o si escogimos operador
@@ -181,6 +231,7 @@ changeSegment:
          JEQ    changeState
          INCD.W    R14             ;Increase segment index
          MOV.B  #0, R5          ;Reset digit index
+
 
          ret
 
@@ -279,7 +330,8 @@ changeState:
        mov.b #0, R5
        mov.b #0, R14
        MOV.W #2,&LCDCMEMCTL  ;clear LCD memory
-       jmp MainCheckState
+
+       jmp initialValue
 
 
 ; We make a seperate loop to get the arthm values until button pressed
@@ -332,7 +384,7 @@ changeOperator:
          pop    R7
          pop    R6
 
-         CMP.B  #3, R5
+         CMP.B  #4, R5
          JEQ    resetIndex              ;Reset index if we're at '*'
          INC    R5
          ret
@@ -343,8 +395,8 @@ showResult:
          CMP.B  #0x50, R13
          JEQ    addition
          CMP.B  #0, R13
-         ;JEQ    substraction
-         ;CMP.B  #0x28, R13
+         JEQ    substraction
+         CMP.B  #0x28, R13
          JEQ    division
          CMP.B  #0xFA, R13
          JEQ    multiplication
@@ -352,7 +404,46 @@ showResult:
 
 showNumber:
        call     #extractDigits
-       jmp      $
+       mov      #0, R14
+       jmp      display
+
+display:
+         push   R4
+         push   R11
+
+         MOV      #result, R7
+         Add      R6, R7
+
+         MOV.w    #segmentsHi,  R4
+         MOV.w    #segmentsL,   R11
+         add    R14, R4
+         add    R14, R11
+         mov.b  0(R7), R7
+         mov    0(R4), R4
+         mov    0(R11), R11
+
+         MOV.B  digitH(R7), 0(R4)
+         MOV.B  digitL(R7), 0(R11)
+
+         pop    R11
+         pop    R4
+
+
+         dec    R6
+         incd   R14
+         cmp    #1, R6
+         jge    display
+         jmp  $
+
+
+
+
+
+
+
+
+
+
 
 
 addition:
@@ -423,55 +514,56 @@ keepSubstracting:
 
 
 extractDigits:
-        push    R5                      ;R5 contiene el valor completo
+                        ;R7 contiene el valor completo
+        push R9
         mov.b   #0, R6                  ;R6: arreglo de digitos
         jmp     keepExtracting
 
 keepExtracting:
         call    #module10
         inc     R6
-        mov.b   R9, result(R6)
+        mov.b   R7, result(R6)
         call    #division10
-        mov.w   R9, R5
-        cmp.w   #1, R5
+        mov.w   R7, R9
+        cmp.w   #1, R9
         JGE     keepExtracting          ;TODO (if not equal to 0)
-        pop     R5
+        pop     R9
         ret
 
 division10:
-        push    R5                       ;we'll manipulate R5 (R5 / 10)
-        mov.w   #0, R9                   ;R9 returns the coecient (result)
-        sub.w   #10, R5
-        cmp.w   #0, R5
+        push    R9                       ;we'll manipulate R5 (R5 / 10)
+        mov.w   #0, R7                   ;R9 returns the coecient (result)
+        sub.w   #10, R9
+        cmp.w   #0, R9
         JGE     keepSubstractingDiv10
-        pop     R5                      ;restore value
+        pop     R9                      ;restore value
         ret
 
 keepSubstractingDiv10:
-        inc     R9
-        sub.w   #10, R5
-        cmp.w   #0, R5
+        inc     R7
+        sub.w   #10, R9
+        cmp.w   #0, R9
         JGE     keepSubstractingDiv10
-        pop     R5                      ;restore value
+        pop     R9                      ;restore value
         ret
 
 module10:
-        push    R5                       ;we'll manipulate R5(R5 mod 10)
-        sub.w   #10, R5
-        cmp.w   #0, R5
+        push    R9                       ;we'll manipulate R5(R5 mod 10)
+        sub.w   #10, R9
+        cmp.w   #0, R9
         JGE     keepSubstractingMod10
-        add.w   #10, R5
-        mov.w   R5, R9                  ;R9 returns the "residuo" (result)
-        pop     R5                      ;restore value
+        add.w   #10, R9
+        mov.w   R9, R7                  ;R9 returns the "residuo" (result)
+        pop     R9                      ;restore value
         ret
 
 keepSubstractingMod10:
-        sub.w   #10, R5
-        cmp.w   #0, R5
+        sub.w   #10, R9
+        cmp.w   #0, R9
         JGE     keepSubstractingMod10
-        add.w   #10, R5
-        mov.w   R5, R9                  ;R9 returns the "residuo" (result)
-        pop     R5                      ;restore value
+        add.w   #10, R9
+        mov.w   R9, R7                  ;R9 returns the "residuo" (result)
+        pop     R9                      ;restore value
         ret
 
 
