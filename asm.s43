@@ -69,6 +69,8 @@ UnlockGPIO:                           ;DIsbale GPIO power-on default
 main:   NOP                             ; main program
         MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
 
+startSystem:
+        MOV.W   #2,&LCDCMEMCTL  ;clear LCD memory
         mov    #0xFFFF, R10
         MOV.B  #0, R5          ; track index of digit selected
         MOV.B  #0, R4          ; track which button is pressed
@@ -88,6 +90,8 @@ main:   NOP                             ; main program
 initialValue:
          CMP.b  #1,r8
          JEQ    operator
+         cmp.b  #4, R8
+         JEQ    MainCheckState
          jmp    zero
 
 
@@ -146,8 +150,8 @@ MainCheckState:
          JEQ    calc
          CMP.B  #3, R8
          JEQ    showResult
-         ;CMP.B  #4, R8
-         ;JEQ    cleanUp ;Clean everything to restart operations
+         CMP.B  #4, R8
+         JEQ    startSystem ;Clean everything to restart operations
 
 calc:
          MOV.B  &P1IN,R4        ;Reads if one of the pins have been pressed
@@ -155,7 +159,7 @@ calc:
          and.b  #00000110B,R4
          CMP.B  #4,R4           ;Left button pressed.
          JEQ    startIncNum     ;Increase the number in current segment
-        CMP.B  #2,R4           ;Right button is pressed.
+         CMP.B  #2,R4           ;Right button is pressed.
          JEQ    startChangeSegment   ;Change segment to the right
          JMP    calc
 
@@ -423,20 +427,20 @@ showNumber:
        mov      #0, R14
        jmp      display
 
-;Objetivo:  A�adir 0s al arreglo de digitos result de no tener suficientes digitos.
+;Objetivo:  Añadir 0s al arreglo de digitos result de no tener suficientes digitos.
 ;Precondiciones: R6 es el numero de digitos en result.
 ;Postcondiciones: El registro R6 sera 4 y habran 4 digitos en results.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/14/2021
 extractZeros:
        cmp.b   #4, R6
        jl      keepExtractingZeros
        ret
 
-;Objetivo:  A�adir 0s hasta que R6 llegue a 4.
+;Objetivo:  Añadir 0s hasta que R6 llegue a 4.
 ;Precondiciones: R6 es el numero de digitos en result.
 ;Postcondiciones: El registro R6 sera 4 y habran 4 digitos en results.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/14/2021
 keepExtractingZeros:
        inc     R6
@@ -471,7 +475,8 @@ display:
          incd   R14
          cmp    #1, R6
          jge    display
-         jmp  $
+
+         jmp    restartLoop
 
 
 
@@ -515,7 +520,7 @@ start:
 ;Objetivo: Guardar los primeros 2 digitos del resultado si tiene 6 digitos
 ;Precondiciones: R10 contiene la cantidad de 10,000s que contiene el resultado, R9 es el conteo hasta 10,000
 ;Postcondiciones: //Los registros R10 y R9 no tendran efectos secundarios. El registro R11 no debe ser afectado por los otros estados del programa
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/15/2021
 addOverflow:
         inc     R10
@@ -543,7 +548,7 @@ finishM:
 ;Objetivo: Guardar la division de R12 entre R11 en R9 luego de validar que R11 no sea 0.
 ;Precondiciones: R12 contiene lel primer valor y R11 el segundo
 ;Postcondiciones: Los registros R11 y R12 no tendran efectos secundarios. El registro R9 sera alterado.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/12/2021
 division:
         cmp.w   #1, R11
@@ -553,7 +558,7 @@ division:
 ;Objetivo: Comenzar el proceso de division entre R11 y R12
 ;Precondiciones: R12 contiene el primer valor y R11 el segundo. R9 incrementa con cada brinco.
 ;Postcondiciones: Los registros R11 y R12 no tendran efectos secundarios. El registro R9 sera alterado.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/12/2021
 startDivision:
         push    R12                     ;we'll manipulate R12 (R12 / R11)
@@ -567,7 +572,7 @@ startDivision:
 ;Objetivo: Restar R11 a R12 hasta llegar a un valor negativo.
 ;Precondiciones: R12 contiene el primer valor y R11 el segundo. R9 incrementa con cada brinco.
 ;Postcondiciones: Los registros R11 y R12 no tendran efectos secundarios. El registro R9 sera alterado.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/12/2021
 keepSubstracting:
         inc     R9
@@ -580,7 +585,7 @@ keepSubstracting:
 ;Objetivo: Dado un valor, extraer cada digito en decimal.
 ;Precondiciones: R9 contiene el valor original. R6 se usa como arreglo.
 ;Postcondiciones: El registro R9 no tendra efectos secundarios. El registro R6 sera alterado.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/14/2021
 extractDigits:
                         ;R7 contiene el valor completo
@@ -591,7 +596,7 @@ extractDigits:
 ;Objetivo: Dado un valor, extraer cada digito en decimal.
 ;Precondiciones: R9 contiene el valor original. R6 se usa como arreglo.
 ;Postcondiciones: El registro R9 no tendra efectos secundarios. El registro R6 sera alterado.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/14/2021
 keepExtracting:
         call    #module10
@@ -607,7 +612,7 @@ keepExtracting:
 ;Objetivo: Dividir el valor en el registro R9 por 10.
 ;Precondiciones: R9 contiene el valor original. R7 se usa temporalmente.
 ;Postcondiciones: El registro R9 no tendra efectos secundarios. El registro R7 sera alterado.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/14/2021
 division10:
         push    R9                       ;we'll manipulate R9 (R9 / 10)
@@ -621,7 +626,7 @@ division10:
 ;Objetivo: Restar  10 al valor en el registro R9 hasta que sea negativo.
 ;Precondiciones: R9 contiene el valor original. R7 se usa temporalmente.
 ;Postcondiciones: El registro R9 no tendra efectos secundarios. El registro R7 sera alterado.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/14/2021
 keepSubstractingDiv10:
         inc     R7
@@ -634,7 +639,7 @@ keepSubstractingDiv10:
 ;Objetivo: Encontrar el residuo de R9 mod 10
 ;Precondiciones: R9 contiene el valor original. R7 se usa temporalmente.
 ;Postcondiciones: El registro R9 no tendra efectos secundarios. El registro R7 sera alterado.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/14/2021
 module10:
         push    R9                       ;we'll manipulate R9(R9 mod 10)
@@ -649,7 +654,7 @@ module10:
 ;Objetivo: Restar  10 al valor en el registro R9 hasta que sea negativo y devolver el residuo en R7.
 ;Precondiciones: R9 contiene el valor original. R7 se usa temporalmente.
 ;Postcondiciones: El registro R9 no tendra efectos secundarios. El registro R7 sera alterado.
-;Autor: Ver�nica Bernier
+;Autor: Verónica Bernier
 ;Fecha: 3/14/2021
 keepSubstractingMod10:
         sub.w   #10, R9
@@ -660,12 +665,16 @@ keepSubstractingMod10:
         pop     R9                      ;restore value
         ret
 
+restartLoop:
+        MOV.B  &P1IN,R4        ;Reads if one of the pins have been pressed
+        call   #delay
+        and.b  #00000110B,R4
+        CMP.B  #2,R4           ;Right button is pressed.
+        JEQ    changeState   ;Change segment to the right
+        JMP    restartLoop
 
 return:
         ret
-
-
-
 
 delay:
          mov    #0xFFFF, R10
